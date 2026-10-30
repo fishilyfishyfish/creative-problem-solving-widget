@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">급식 시간표</string>
+    <string name="widget_name">급식·시간표</string>
+    <string name="widget_description">오늘 시간표와 점심 메뉴. 하교 후에는 다음 등교일로 바뀐다.</string>
+</resources>
