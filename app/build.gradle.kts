@@ -12,6 +12,12 @@ val neisApiKey: String = (System.getenv("NEIS_API_KEY")
     ?: (project.findProperty("NEIS_API_KEY") as String?)
     ?: "").trim().replace("\"", "")
 
+// 버전 번호 = GitHub Actions 실행 번호. 앱은 이 숫자로 새 버전인지 판단한다.
+val buildNumber: Int = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1
+
+// 업데이트를 받아올 저장소
+val updateRepo: String = System.getenv("GITHUB_REPOSITORY") ?: "fishilyfishyfish/creative-problem-solving-widget"
+
 android {
     namespace = "io.github.fishilyfishyfish.cpswidget"
     compileSdk = 35
@@ -20,14 +26,30 @@ android {
         applicationId = "io.github.fishilyfishyfish.cpswidget"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = buildNumber
+        versionName = "1.0.$buildNumber"
         buildConfigField("String", "NEIS_API_KEY", "\"$neisApiKey\"")
+        buildConfigField("String", "UPDATE_REPO", "\"$updateRepo\"")
+    }
+
+    // 빌드마다 같은 키로 서명해야 덮어 설치(업데이트)가 된다.
+    // 개인 과제용이라 키를 저장소에 같이 둔다.
+    signingConfigs {
+        create("shared") {
+            storeFile = rootProject.file("keystore/cps-widget.jks")
+            storePassword = "cps-widget-key"
+            keyAlias = "cps-widget"
+            keyPassword = "cps-widget-key"
+        }
     }
 
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("shared")
+        }
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("shared")
         }
     }
 

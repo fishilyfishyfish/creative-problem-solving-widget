@@ -8,6 +8,10 @@
         android:name="android.permission.SCHEDULE_EXACT_ALARM"
         android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <!-- 앱 안 업데이트: 새 APK를 받아 설치하고, 새 버전이 있으면 알림 -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <uses-permission android:name="android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:allowBackup="true"
@@ -41,6 +45,10 @@
 
         <receiver
             android:name=".schedule.TickReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".update.InstallResultReceiver"
             android:exported="false" />
 
         <receiver

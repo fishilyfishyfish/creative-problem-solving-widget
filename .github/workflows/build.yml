@@ -10,6 +10,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: write   # Release를 만들기 위해 필요
 
     steps:
       - uses: actions/checkout@v5
@@ -54,8 +56,30 @@ jobs:
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
 
+      # main에 올라온 코드만 Release로 게시한다. 앱은 가장 최근 Release를 보고 업데이트한다.
+      - name: Publish release
+        if: success() && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUILD: ${{ github.run_number }}
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk cps-widget.apk
+          git log -1 --pretty=%B > notes.txt
+          gh release create "build-$BUILD" cps-widget.apk \
+            --target "$GITHUB_SHA" \
+            --title "빌드 $BUILD" \
+            --notes-file notes.txt \
+            --latest
+
       - name: Summary
         if: success()
         shell: bash
         run: |
-          echo "APK는 이 실행 페이지 아래쪽 **Artifacts → app-debug**에서 받을 수 있음 (zip 안에 app-debug.apk)." >> "$GITHUB_STEP_SUMMARY"
+          if [ "$GITHUB_EVENT_NAME" != "pull_request" ] && [ "$GITHUB_REF" = "refs/heads/main" ]; then
+            echo "빌드 ${{ github.run_number }}을 Release로 게시함. 앱이 알아서 새 버전을 알려줌." >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "처음 설치: https://github.com/${{ github.repository }}/releases/latest/download/cps-widget.apk" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "APK는 이 실행 페이지 아래쪽 **Artifacts → app-debug**에서 받을 수 있음." >> "$GITHUB_STEP_SUMMARY"
+          fi

@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
+import io.github.fishilyfishyfish.cpswidget.update.UpdateCheckWorker
 import io.github.fishilyfishyfish.cpswidget.widget.WidgetRefresher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -46,6 +47,7 @@ class SystemEventReceiver : BroadcastReceiver() {
         runAsync(context) {
             Updater.onTick(it)
             MealFetchWorker.schedulePeriodic(it)
+            UpdateCheckWorker.schedule(it)
         }
     }
 }

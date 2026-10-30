@@ -2,6 +2,8 @@ package io.github.fishilyfishyfish.cpswidget.ui
 
 import android.app.TimePickerDialog
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.util.Log
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -16,7 +18,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardActions
@@ -25,16 +29,19 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -65,6 +72,9 @@ import io.github.fishilyfishyfish.cpswidget.logic.Settings
 import io.github.fishilyfishyfish.cpswidget.logic.formatMinutes
 import io.github.fishilyfishyfish.cpswidget.schedule.MealFetchWorker
 import io.github.fishilyfishyfish.cpswidget.schedule.TickScheduler
+import io.github.fishilyfishyfish.cpswidget.update.InstallState
+import io.github.fishilyfishyfish.cpswidget.update.UpdateInstaller
+import io.github.fishilyfishyfish.cpswidget.update.Updates
 import io.github.fishilyfishyfish.cpswidget.widget.WidgetRefresher
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -116,6 +126,7 @@ fun SettingsScreen() {
                 .imePadding()
                 .padding(16.dp),
         ) {
+            UpdateBanner()
             SectionTitle("시간표")
             TimetableGrid(settings, onChange)
             Hint("칸을 눌러 과목·교실 입력. 왼쪽 칸을 눌러 교시 시각 입력")
@@ -163,6 +174,70 @@ private fun Hint(text: String) {
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(top = 6.dp),
     )
+}
+
+// ───────────────────────── 업데이트 띠 ─────────────────────────
+
+/** 새 버전이 있을 때만 맨 위에 보이는 띠 */
+@Composable
+private fun UpdateBanner() {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val release by Updates.available.collectAsState()
+    val state by Updates.install.collectAsState()
+
+    // 설치 확인 화면은 앱이 화면에 보일 때 띄운다.
+    LaunchedEffect(state) {
+        val s = state
+        if (s is InstallState.NeedsConfirm) {
+            Updates.install.value = InstallState.Installing
+            try {
+                context.startActivity(s.intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            } catch (e: Exception) {
+                Updates.install.value = InstallState.Failed("설치 화면을 열 수 없음")
+            }
+        }
+    }
+
+    val r = release ?: return
+    val s = state
+    val detail = when (s) {
+        InstallState.Idle -> "지금은 빌드 ${Updates.currentBuild}"
+        is InstallState.Downloading -> "받는 중" + (s.percent?.let { " $it%" } ?: "")
+        InstallState.Installing, is InstallState.NeedsConfirm -> "설치 중"
+        InstallState.NeedsPermission -> "이 앱의 '출처를 알 수 없는 앱 설치'를 허용하고 돌아오기"
+        is InstallState.Failed -> s.message
+    }
+    val busy = s is InstallState.Downloading || s is InstallState.Installing || s is InstallState.NeedsConfirm
+
+    Surface(
+        color = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+    ) {
+        Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("새 버전 있음 · 빌드 ${r.build}", style = MaterialTheme.typography.titleSmall)
+                Text(detail, style = MaterialTheme.typography.bodySmall)
+            }
+            Spacer(Modifier.width(8.dp))
+            when {
+                busy -> CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 3.dp)
+                s == InstallState.NeedsPermission -> Button(onClick = {
+                    context.startActivity(
+                        Intent(
+                            android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                            Uri.parse("package:${context.packageName}"),
+                        ),
+                    )
+                }) { Text("허용하기") }
+                else -> Button(onClick = { scope.launch { UpdateInstaller.start(context, r) } }) {
+                    Text(if (s is InstallState.Failed) "다시 시도" else "업데이트")
+                }
+            }
+        }
+    }
 }
 
 // ───────────────────────── 시간표 ─────────────────────────
