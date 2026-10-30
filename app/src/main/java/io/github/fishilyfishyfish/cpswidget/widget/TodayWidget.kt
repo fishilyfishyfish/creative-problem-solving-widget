@@ -65,6 +65,7 @@ private object Palette {
     val text: ColorProvider = DayNight(day = Color(0xFF1F2328), night = Color(0xFFE8E6E3))
     val subtle: ColorProvider = DayNight(day = Color(0xFF6B6F76), night = Color(0xFF9DA1A8))
     val line: ColorProvider = DayNight(day = Color(0xFFD9D4CA), night = Color(0xFF3A3C42))
+    val clear: ColorProvider = DayNight(day = Color.Transparent, night = Color.Transparent)
 
     /** 지금 */
     val red: ColorProvider = DayNight(day = Color(0xFFFFA59E), night = Color(0xFF8E3B34))
@@ -154,13 +155,13 @@ private fun WidgetContent(ui: WidgetUi) {
     }
 }
 
-/** 형광펜처럼 글자 뒤에 색을 칠한다. */
+/**
+ * 형광펜처럼 글자 뒤에 색을 칠한다.
+ * 강조가 없을 때도 투명 배경을 꼭 지정해야 한다. 위젯은 기존 화면에 덮어쓰는 방식으로 갱신돼서,
+ * 배경을 생략하면 예전에 칠한 색이 그대로 남는다.
+ */
 private fun marker(color: ColorProvider?): GlanceModifier =
-    if (color == null) {
-        GlanceModifier.padding(horizontal = 3.dp)
-    } else {
-        GlanceModifier.background(color).cornerRadius(4.dp).padding(horizontal = 3.dp)
-    }
+    GlanceModifier.background(color ?: Palette.clear).cornerRadius(4.dp).padding(horizontal = 3.dp)
 
 @Composable
 private fun PeriodCell(row: PeriodRow, divider: Boolean) {
