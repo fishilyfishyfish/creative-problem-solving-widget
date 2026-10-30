@@ -27,14 +27,6 @@ object Allergens {
 
 data class Dish(val name: String, val allergens: Set<Int>)
 
-data class DishMatch(val allergens: Set<Int>, val keywords: List<String>) {
-    val flagged: Boolean get() = allergens.isNotEmpty() || keywords.isNotEmpty()
-
-    /** "우유·밀·오이" 형태 */
-    fun label(): String =
-        (allergens.sorted().mapNotNull { Allergens.NAMES[it] } + keywords).joinToString("·")
-}
-
 object MealParser {
     private val BR = Regex("<br\\s*/?>", RegexOption.IGNORE_CASE)
 
@@ -67,11 +59,8 @@ object MealParser {
         return Dish(name.ifEmpty { text.trim() }, nums)
     }
 
-    fun match(dish: Dish, allergens: Set<Int>, keywords: List<String>): DishMatch {
-        val hitAllergens = dish.allergens intersect allergens
-        val hitKeywords = keywords.filter { it.isNotBlank() && dish.name.contains(it.trim(), ignoreCase = true) }
-        return DishMatch(hitAllergens, hitKeywords)
-    }
+    /** 체크한 알레르기 번호가 하나라도 들어 있으면 true */
+    fun isFlagged(dish: Dish, allergens: Set<Int>): Boolean = dish.allergens.any { it in allergens }
 
     private fun numbers(s: String): Set<Int> =
         s.split(NON_DIGITS)

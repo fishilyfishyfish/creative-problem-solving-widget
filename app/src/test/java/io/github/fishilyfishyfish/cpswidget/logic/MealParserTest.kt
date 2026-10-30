@@ -28,30 +28,15 @@ class MealParserTest {
 
     @Test
     fun flagsByAllergenNumber() {
-        val dishes = MealParser.parse(raw)
-        val flagged = dishes.filter { MealParser.match(it, setOf(2), emptyList()).flagged }.map { it.name }
+        val flagged = MealParser.parse(raw).filter { MealParser.isFlagged(it, setOf(2)) }.map { it.name }
         assertEquals(listOf("돈까스&소스", "우유"), flagged)
-    }
-
-    @Test
-    fun flagsByKeyword() {
-        val dish = MealParser.parseDish("오이무침 (5.13)")
-        val m = MealParser.match(dish, emptySet(), listOf("오이"))
-        assertTrue(m.flagged)
-        assertEquals("오이", m.label())
-    }
-
-    @Test
-    fun labelListsAllergenNamesInOrder() {
-        val dish = MealParser.parseDish("돈까스(1.2.5.6.10)")
-        val m = MealParser.match(dish, setOf(10, 2), emptyList())
-        assertEquals("우유·돼지고기", m.label())
     }
 
     @Test
     fun ignoresNumbersOutsideRange() {
         val dish = MealParser.parseDish("특식(0.20.2)")
         assertEquals(setOf(2), dish.allergens)
-        assertFalse(MealParser.match(dish, setOf(1), emptyList()).flagged)
+        assertFalse(MealParser.isFlagged(dish, setOf(1)))
+        assertTrue(MealParser.isFlagged(dish, setOf(2)))
     }
 }

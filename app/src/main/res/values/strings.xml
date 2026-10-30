@@ -2,5 +2,5 @@
 <resources>
     <string name="app_name">급식 시간표</string>
     <string name="widget_name">급식·시간표</string>
-    <string name="widget_description">오늘 시간표와 점심 메뉴. 하교 후에는 다음 등교일로 바뀐다.</string>
+    <string name="widget_description">그날 시간표와 급식. 지금 교시는 빨강, 다음 교시는 파랑, 알레르기 메뉴는 노랑.</string>
 </resources>

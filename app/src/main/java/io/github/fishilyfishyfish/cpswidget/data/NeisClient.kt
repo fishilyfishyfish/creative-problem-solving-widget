@@ -1,5 +1,6 @@
 package io.github.fishilyfishyfish.cpswidget.data
 
+import io.github.fishilyfishyfish.cpswidget.logic.MealType
 import io.github.fishilyfishyfish.cpswidget.logic.School
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -14,8 +15,8 @@ import java.time.format.DateTimeFormatter
 
 class NeisException(message: String) : Exception(message)
 
-data class LunchResult(
-    val meals: Map<LocalDate, String>,
+data class MealsResult(
+    val meals: Map<Pair<LocalDate, MealType>, String>,
     /** 요청 범위의 데이터를 전부 받았는지 */
     val complete: Boolean,
 )
@@ -43,28 +44,29 @@ object NeisClient {
         }.filter { it.officeCode.isNotBlank() && it.schoolCode.isNotBlank() }
     }
 
-    /** 점심(MMEAL_SC_CODE=2)만 날짜 범위로 받아온다. */
-    suspend fun fetchLunch(school: School, from: LocalDate, to: LocalDate, apiKey: String): LunchResult =
+    /** 조식·중식·석식을 날짜 범위로 한 번에 받아온다. */
+    suspend fun fetchMeals(school: School, from: LocalDate, to: LocalDate, apiKey: String): MealsResult =
         withContext(Dispatchers.IO) {
             val page = request(
                 endpoint = "mealServiceDietInfo",
                 params = mapOf(
                     "ATPT_OFCDC_SC_CODE" to school.officeCode,
                     "SD_SCHUL_CODE" to school.schoolCode,
-                    "MMEAL_SC_CODE" to "2",
                     "MLSV_FROM_YMD" to from.format(YMD),
                     "MLSV_TO_YMD" to to.format(YMD),
                 ),
                 apiKey = apiKey,
-                pSize = if (apiKey.isBlank()) 5 else 31,
+                pSize = if (apiKey.isBlank()) 5 else 100,
             )
-            val meals = mutableMapOf<LocalDate, String>()
+            val meals = mutableMapOf<Pair<LocalDate, MealType>, String>()
             for (row in page.rows) {
                 val date = runCatching { LocalDate.parse(row.optString("MLSV_YMD"), YMD) }.getOrNull() ?: continue
+                val type = MealType.ofCode(row.optString("MMEAL_SC_CODE").toIntOrNull() ?: continue) ?: continue
                 val menu = row.optString("DDISH_NM")
-                meals[date] = meals[date]?.let { "$it<br/>$menu" } ?: menu
+                val k = date to type
+                meals[k] = meals[k]?.let { "$it<br/>$menu" } ?: menu
             }
-            LunchResult(meals, complete = page.total <= page.rows.size)
+            MealsResult(meals, complete = page.total <= page.rows.size)
         }
 
     private class Page(val rows: List<JSONObject>, val total: Int)

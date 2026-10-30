@@ -21,7 +21,7 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.concurrent.TimeUnit
 
-/** 나이스에서 점심 메뉴를 받아 캐시에 저장하고 위젯을 다시 그린다. */
+/** 나이스에서 급식을 받아 캐시에 저장하고 위젯을 다시 그린다. */
 class MealFetchWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
@@ -35,7 +35,7 @@ class MealFetchWorker(context: Context, params: WorkerParameters) : CoroutineWor
         val to = if (apiKey.isBlank()) DayPlanner.nextSchoolDay(today) else today.plusDays(7)
 
         return try {
-            val result = NeisClient.fetchLunch(school, today, to, apiKey)
+            val result = NeisClient.fetchMeals(school, today, to, apiKey)
             store.saveRange(today, to, result.meals, result.complete)
             WidgetRefresher.refresh(applicationContext)
             Result.success()
@@ -67,13 +67,16 @@ class MealFetchWorker(context: Context, params: WorkerParameters) : CoroutineWor
             )
         }
 
-        /** 위젯에 보일 날짜의 급식이 캐시에 없으면 받아온다. */
+        /** 오늘·위젯에 보일 날짜의 끼니 중 캐시에 없는 게 있으면 받아온다. */
         fun ensureFresh(context: Context) {
             val settings = SettingsStore(context).load()
             if (settings.school == null) return
+            val meals = settings.enabledMeals().keys
+            if (meals.isEmpty()) return
             val store = MealStore(context)
             val target = DayPlanner.targetDay(LocalDateTime.now(), settings)
-            val missing = store.get(LocalDate.now()) == null || store.get(target.date) == null
+            val dates = setOf(LocalDate.now(), target.date)
+            val missing = dates.any { d -> meals.any { t -> store.get(d, t) == null } }
             if (!missing) return
             // 방금 실패했다면 잠깐 쉬었다가 다시 시도한다.
             val recentlyFailed = System.currentTimeMillis() - store.lastErrorAt < 10 * 60 * 1000L &&

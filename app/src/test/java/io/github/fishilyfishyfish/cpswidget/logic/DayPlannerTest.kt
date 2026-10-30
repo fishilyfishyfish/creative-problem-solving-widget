@@ -1,6 +1,7 @@
 package io.github.fishilyfishyfish.cpswidget.logic
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -32,48 +33,61 @@ class DayPlannerTest {
     @Test
     fun dismissalIsPerWeekday() {
         val wednesday = LocalDate.of(2026, 10, 28)
-        // 수요일은 15:30 하교
+        // 수요일만 15:30 하교
         assertEquals(DayMode.TODAY, DayPlanner.targetDay(at(wednesday, 15, 29), settings).mode)
         assertEquals(TargetDay(wednesday.plusDays(1), DayMode.NEXT), DayPlanner.targetDay(at(wednesday, 15, 30), settings))
     }
 
-    private val times = mapOf(
+    private val classTimes = mapOf(
         1 to PeriodTime(min(8, 40), min(9, 30)),
         2 to PeriodTime(min(9, 40), min(10, 30)),
-        3 to PeriodTime(min(10, 40), min(11, 30)),
         4 to PeriodTime(min(11, 40), min(12, 30)),
         5 to PeriodTime(min(13, 30), min(14, 20)),
-        6 to PeriodTime(min(14, 30), min(15, 20)),
+    )
+    private val meals = mapOf(
+        MealType.LUNCH to PeriodTime(min(12, 30), min(13, 30)),
+        MealType.DINNER to PeriodTime(min(17, 30), min(18, 30)),
     )
 
     @Test
-    fun periodStatusAcrossTheDay() {
-        val classes = setOf(1, 2, 3, 4, 5, 6)
-        assertEquals(PeriodStatus.BeforeSchool(1), DayPlanner.periodStatus(min(8, 0), times, classes))
-        assertEquals(PeriodStatus.InClass(1), DayPlanner.periodStatus(min(8, 40), times, classes))
-        assertEquals(PeriodStatus.Break(2, false), DayPlanner.periodStatus(min(9, 30), times, classes))
-        assertEquals(PeriodStatus.Break(5, true), DayPlanner.periodStatus(min(12, 45), times, classes))
-        assertEquals(PeriodStatus.InClass(6), DayPlanner.periodStatus(min(15, 19), times, classes))
-        assertEquals(PeriodStatus.AfterClasses, DayPlanner.periodStatus(min(15, 20), times, classes))
+    fun duringClassShowsNowAndNext() {
+        assertEquals(Moment(1, null, 2), DayPlanner.moment(min(9, 0), classTimes, meals))
+        assertEquals(Moment(4, null, 5), DayPlanner.moment(min(12, 0), classTimes, meals))
     }
 
     @Test
-    fun emptyPeriodIsNotLunch() {
-        // 3교시가 비어 있으면 2교시 뒤는 공강이지 점심이 아님
-        val classes = setOf(1, 2, 4, 5)
-        assertEquals(PeriodStatus.Break(4, false), DayPlanner.periodStatus(min(11, 0), times, classes))
+    fun breakHasOnlyNext() {
+        assertEquals(Moment(null, null, 2), DayPlanner.moment(min(9, 30), classTimes, meals))
+        assertEquals(Moment(null, null, 1), DayPlanner.moment(min(8, 0), classTimes, meals))
+        // 3교시가 비어 있으면 그 시간엔 다음이 4교시
+        assertEquals(Moment(null, null, 4), DayPlanner.moment(min(11, 0), classTimes, meals))
     }
 
     @Test
-    fun noClassesWhenTimetableEmpty() {
-        assertEquals(PeriodStatus.NoClasses, DayPlanner.periodStatus(min(9, 0), times, emptySet()))
+    fun mealTimeIsNow() {
+        assertEquals(Moment(null, MealType.LUNCH, 5), DayPlanner.moment(min(12, 45), classTimes, meals))
+        assertEquals(Moment(null, null, null), DayPlanner.moment(min(15, 0), classTimes, meals))
+    }
+
+    @Test
+    fun mealToShowFollowsTime() {
+        val withBreakfast = meals + (MealType.BREAKFAST to PeriodTime(min(7, 30), min(8, 10)))
+        assertEquals(MealType.BREAKFAST, DayPlanner.mealToShow(DayMode.TODAY, min(7, 0), withBreakfast))
+        assertEquals(MealType.LUNCH, DayPlanner.mealToShow(DayMode.TODAY, min(8, 10), withBreakfast))
+        assertEquals(MealType.LUNCH, DayPlanner.mealToShow(DayMode.TODAY, min(13, 29), meals))
+        assertEquals(MealType.DINNER, DayPlanner.mealToShow(DayMode.TODAY, min(13, 30), meals))
+        assertEquals(MealType.DINNER, DayPlanner.mealToShow(DayMode.TODAY, min(20, 0), meals))
+        assertEquals(MealType.LUNCH, DayPlanner.mealToShow(DayMode.NEXT, min(20, 0), meals))
+        assertNull(DayPlanner.mealToShow(DayMode.TODAY, min(9, 0), emptyMap()))
     }
 
     @Test
     fun nextBoundaryPicksClosestChange() {
+        // 기본 교시 시각 + 기본 중식(12:30~13:30)·석식(17:30~18:30)
         assertEquals(at(friday, 9, 30), DayPlanner.nextBoundary(at(friday, 9, 0), settings))
         assertEquals(at(friday, 9, 40), DayPlanner.nextBoundary(LocalDateTime.of(2026, 10, 30, 9, 30, 2), settings))
         assertEquals(at(friday, 16, 30), DayPlanner.nextBoundary(at(friday, 16, 25), settings))
+        assertEquals(at(friday, 17, 30), DayPlanner.nextBoundary(at(friday, 16, 30), settings))
         assertEquals(friday.plusDays(1).atStartOfDay(), DayPlanner.nextBoundary(at(friday, 23, 0), settings))
     }
 }

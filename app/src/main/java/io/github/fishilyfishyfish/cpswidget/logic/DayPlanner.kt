@@ -8,26 +8,15 @@ enum class DayMode { TODAY, NEXT }
 /** 위젯이 보여줄 날짜. 하교 전이면 오늘, 하교 후·주말이면 다음 등교일. */
 data class TargetDay(val date: LocalDate, val mode: DayMode)
 
-sealed interface PeriodStatus {
-    /** 첫 수업 전 */
-    data class BeforeSchool(val nextPeriod: Int) : PeriodStatus
-
-    /** 수업 중 */
-    data class InClass(val period: Int) : PeriodStatus
-
-    /** 쉬는 시간·점심시간·공강 */
-    data class Break(val nextPeriod: Int, val isLunch: Boolean) : PeriodStatus
-
-    /** 그날 마지막 수업이 끝남 */
-    data object AfterClasses : PeriodStatus
-
-    /** 시간표나 교시 시각이 비어 있음 */
-    data object NoClasses : PeriodStatus
-}
+/**
+ * 지금 이 순간의 상태.
+ * @param nowPeriod 수업 중인 교시 (빨강)
+ * @param nowMeal 식사 중인 끼니 (급식 쪽 빨강)
+ * @param nextPeriod 다음 수업 교시 (파랑)
+ */
+data class Moment(val nowPeriod: Int?, val nowMeal: MealType?, val nextPeriod: Int?)
 
 object DayPlanner {
-    /** 교시 사이 간격이 이 이상이면 점심시간으로 본다. */
-    const val LUNCH_GAP_MIN = 30
 
     fun isSchoolDay(date: LocalDate): Boolean = date.dayOfWeek.value in SCHOOL_DAYS
 
@@ -49,38 +38,34 @@ object DayPlanner {
     }
 
     /**
-     * @param allTimes 교시 번호 → 시각 (과목 유무와 상관없이 설정된 전체)
-     * @param classes 그날 과목이 입력된 교시 번호
+     * @param classTimes 그날 과목이 있는 교시 → 시각
+     * @param meals "없음"이 아닌 끼니 → 시각
      */
-    fun periodStatus(nowMin: Int, allTimes: Map<Int, PeriodTime>, classes: Set<Int>): PeriodStatus {
-        val ordered = allTimes.entries
-            .filter { it.value.isValid }
-            .sortedBy { it.value.startMin }
-        val classTimes = ordered.filter { it.key in classes }
-        if (classTimes.isEmpty()) return PeriodStatus.NoClasses
-
-        classTimes.firstOrNull { nowMin >= it.value.startMin && nowMin < it.value.endMin }
-            ?.let { return PeriodStatus.InClass(it.key) }
-
-        val next = classTimes.firstOrNull { it.value.startMin > nowMin }
-            ?: return PeriodStatus.AfterClasses
-
-        if (nowMin < classTimes.first().value.startMin) {
-            return PeriodStatus.BeforeSchool(next.key)
-        }
-
-        val isLunch = ordered.zipWithNext().any { (a, b) ->
-            nowMin >= a.value.endMin && nowMin < b.value.startMin &&
-                b.value.startMin - a.value.endMin >= LUNCH_GAP_MIN
-        }
-        return PeriodStatus.Break(next.key, isLunch)
+    fun moment(nowMin: Int, classTimes: Map<Int, PeriodTime>, meals: Map<MealType, PeriodTime>): Moment {
+        val ordered = classTimes.entries.filter { it.value.isValid }.sortedBy { it.value.startMin }
+        val nowPeriod = ordered.firstOrNull { nowMin in it.value }?.key
+        val nextPeriod = ordered.firstOrNull { it.value.startMin > nowMin }?.key
+        val nowMeal = meals.entries.firstOrNull { it.value.isValid && nowMin in it.value }?.key
+        return Moment(nowPeriod, nowMeal, nextPeriod)
     }
 
-    /** 위젯을 다시 그려야 하는 다음 시각: 교시 시작·끝, 하교, 자정 중 가장 가까운 것 */
+    /**
+     * 급식 칸에 보여줄 끼니.
+     * 오늘: 아직 안 끝난 첫 끼니 (모두 끝났으면 마지막 끼니). 다음 등교일: 첫 끼니.
+     */
+    fun mealToShow(mode: DayMode, nowMin: Int, meals: Map<MealType, PeriodTime>): MealType? {
+        val enabled = meals.entries.filter { it.value.isValid }.sortedBy { it.value.startMin }
+        if (enabled.isEmpty()) return null
+        if (mode == DayMode.NEXT) return enabled.first().key
+        return (enabled.firstOrNull { nowMin < it.value.endMin } ?: enabled.last()).key
+    }
+
+    /** 위젯을 다시 그려야 하는 다음 시각: 교시·식사 시작과 끝, 하교, 자정 중 가장 가까운 것 */
     fun nextBoundary(now: LocalDateTime, settings: Settings): LocalDateTime {
         val today = now.toLocalDate()
         val candidates = mutableListOf<Int>()
-        settings.periodTimes.filterNotNull().filter { it.isValid }.forEach {
+        val times = settings.periodTimes.filterNotNull() + settings.enabledMeals().values
+        times.filter { it.isValid }.forEach {
             candidates += it.startMin
             candidates += it.endMin
         }

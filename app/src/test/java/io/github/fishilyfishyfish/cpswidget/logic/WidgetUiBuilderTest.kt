@@ -1,75 +1,98 @@
 package io.github.fishilyfishyfish.cpswidget.logic
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
 
 class WidgetUiBuilderTest {
 
+    // 2026-10-30은 금요일
     private val friday = LocalDate.of(2026, 10, 30)
-    private val monday = LocalDate.of(2026, 11, 2)
 
-    private val settings = Settings(
-        school = School("J10", "7530000", "테스트고등학교"),
-        timetable = SCHOOL_DAYS.associateWith { List(MAX_PERIODS) { "" } } +
-            mapOf(
-                5 to listOf("국어", "수학", "", "체육", "영어", "", "", ""),
-                1 to listOf("과학", "", "", "", "", "", "", ""),
-            ),
-        allergens = setOf(2),
-        keywordsRaw = "오이, ",
-    )
+    private val settings = Settings(school = School("J10", "7530000", "테스트고등학교"), allergens = setOf(2))
+        .withCell(5, 1, "국어", "2-3")
+        .withCell(5, 2, "수학", "2-3")
+        .withCell(5, 4, "체육", "체육관")
+        .withCell(5, 5, "영어", "")
+        .withCell(1, 1, "과학", "과학실")
 
-    private val menu = MealEntry.Menu("쌀밥<br/>돈까스(1.2.5.6.10)<br/>오이무침<br/>김치(9)")
+    private val lunch = MealEntry.Menu("쌀밥<br/>돈까스(1.2.5.6.10)<br/>김치(9)")
+    private val dinner = MealEntry.Menu("카레라이스(2.5.6)<br/>단무지")
 
-    @Test
-    fun todayDuringClass() {
-        val ui = WidgetUiBuilder.build(friday.atTime(9, 0), settings, menu, null)
-        assertEquals("10월 30일 (금) · 오늘", ui.title)
-        assertEquals("1교시 수업 중 · ~09:30", ui.status)
-        assertEquals(listOf(1, 2, 4, 5), ui.periods.map { it.period })
-        assertEquals(Highlight.NOW, ui.periods[0].highlight)
-        assertTrue(ui.periods.drop(1).all { it.highlight == Highlight.NONE })
+    private fun lookup(date: LocalDate, type: MealType): MealEntry? = when (type) {
+        MealType.LUNCH -> lunch
+        MealType.DINNER -> dinner
+        MealType.BREAKFAST -> null
     }
 
     @Test
-    fun breakHighlightsNextClass() {
-        val ui = WidgetUiBuilder.build(friday.atTime(10, 45), settings, menu, null)
-        assertEquals("쉬는 시간 · 다음 4교시", ui.status)
-        assertEquals(Highlight.NEXT, ui.periods.first { it.period == 4 }.highlight)
+    fun duringClassNowIsRedNextIsBlue() {
+        val ui = WidgetUiBuilder.build(friday.atTime(9, 0), settings, ::lookup, null)
+        assertEquals("금", ui.dayLabel)
+        assertEquals(listOf(1, 2, 4, 5), ui.periods.map { it.period })
+        assertEquals("2-3", ui.periods[0].room)
+        assertEquals(
+            listOf(Highlight.NOW, Highlight.NEXT, Highlight.NONE, Highlight.NONE),
+            ui.periods.map { it.highlight },
+        )
+    }
+
+    @Test
+    fun breakOnlyBlue() {
+        val ui = WidgetUiBuilder.build(friday.atTime(10, 45), settings, ::lookup, null)
+        assertEquals(
+            listOf(Highlight.NONE, Highlight.NONE, Highlight.NEXT, Highlight.NONE),
+            ui.periods.map { it.highlight },
+        )
+    }
+
+    @Test
+    fun lunchTimeMarksMealAsNow() {
+        val ui = WidgetUiBuilder.build(friday.atTime(12, 45), settings, ::lookup, null)
+        assertEquals("중식", ui.mealLabel)
+        assertTrue(ui.mealNow)
+        assertEquals(Highlight.NEXT, ui.periods.first { it.period == 5 }.highlight)
+    }
+
+    @Test
+    fun afterLunchShowsDinner() {
+        val ui = WidgetUiBuilder.build(friday.atTime(14, 0), settings, ::lookup, null)
+        assertEquals("석식", ui.mealLabel)
+        assertFalse(ui.mealNow)
+        val meal = ui.meal as MealUi.Menu
+        assertEquals(listOf("카레라이스", "단무지"), meal.dishes.map { it.name })
+        assertEquals(listOf(true, false), meal.dishes.map { it.flagged })
     }
 
     @Test
     fun afterDismissalSwitchesToNextSchoolDay() {
-        val ui = WidgetUiBuilder.build(friday.atTime(17, 0), settings, null, null)
-        assertEquals("11월 2일 (월) · 다음 등교일", ui.title)
-        assertEquals("", ui.status)
+        val ui = WidgetUiBuilder.build(friday.atTime(17, 0), settings, ::lookup, null)
+        assertEquals("월", ui.dayLabel)
         assertEquals(listOf("과학"), ui.periods.map { it.subject })
-        assertEquals(MealUi.Loading, ui.meal)
+        assertTrue(ui.periods.all { it.highlight == Highlight.NONE })
+        assertEquals("중식", ui.mealLabel)
     }
 
     @Test
-    fun tomorrowLabel() {
-        val ui = WidgetUiBuilder.build(monday.atTime(18, 0), settings, null, null)
-        assertTrue(ui.title.endsWith("· 내일"))
-    }
-
-    @Test
-    fun mealHighlightsAllergenAndKeyword() {
-        val ui = WidgetUiBuilder.build(friday.atTime(9, 0), settings, menu, null)
+    fun allergyIsFlagged() {
+        val ui = WidgetUiBuilder.build(friday.atTime(9, 0), settings, ::lookup, null)
         val meal = ui.meal as MealUi.Menu
-        assertNull(meal.dishes[0].warning)
-        assertEquals("우유", meal.dishes[1].warning)
-        assertEquals("오이", meal.dishes[2].warning)
-        assertNull(meal.dishes[3].warning)
+        assertEquals(listOf(false, true, false), meal.dishes.map { it.flagged })
     }
 
     @Test
     fun mealStates() {
-        assertEquals(MealUi.NoSchool, WidgetUiBuilder.build(friday.atTime(9, 0), settings.copy(school = null), menu, null).meal)
-        assertEquals(MealUi.NoMeal, WidgetUiBuilder.build(friday.atTime(9, 0), settings, MealEntry.None, null).meal)
-        assertEquals(MealUi.Failed("오류"), WidgetUiBuilder.build(friday.atTime(9, 0), settings, null, "오류").meal)
+        val t = friday.atTime(9, 0)
+        assertEquals(MealUi.NoSchool, WidgetUiBuilder.build(t, settings.copy(school = null), ::lookup, null).meal)
+        assertEquals(MealUi.NoMeal, WidgetUiBuilder.build(t, settings, { _, _ -> MealEntry.None }, null).meal)
+        assertEquals(MealUi.Loading, WidgetUiBuilder.build(t, settings, { _, _ -> null }, null).meal)
+        assertEquals(MealUi.Failed("오류"), WidgetUiBuilder.build(t, settings, { _, _ -> null }, "오류").meal)
+
+        val allOff = MealType.entries.fold(settings) { s, type -> s.withMeal(type, s.mealOf(type).copy(enabled = false)) }
+        val ui = WidgetUiBuilder.build(t, allOff, ::lookup, null)
+        assertEquals(MealUi.AllOff, ui.meal)
+        assertEquals("", ui.mealLabel)
     }
 }
