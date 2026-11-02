@@ -2,4 +2,16 @@
 <resources>
     <color name="window_background">#FFFDFBF7</color>
     <color name="ic_launcher_background">#FF2F6FEB</color>
+
+    <!-- 위젯 -->
+    <color name="widget_bg">#FFFDFBF7</color>
+    <color name="widget_text">#FF1F2328</color>
+    <color name="widget_subtle">#FF6B6F76</color>
+    <color name="widget_line">#FFD9D4CA</color>
+    <!-- 지금 -->
+    <color name="widget_red">#FFFFA59E</color>
+    <!-- 다음 -->
+    <color name="widget_blue">#FFA9C8FF</color>
+    <!-- 알레르기 -->
+    <color name="widget_yellow">#FFFFEE58</color>
 </resources>

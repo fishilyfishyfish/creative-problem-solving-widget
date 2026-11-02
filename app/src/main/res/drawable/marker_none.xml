@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 강조 없음. 배경을 비우지 않고 투명색으로 덮어써야 예전 색이 남지 않는다. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="#00000000" />
+    <corners android:radius="4dp" />
+</shape>

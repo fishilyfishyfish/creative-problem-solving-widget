@@ -1,4 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="window_background">#FF1E1F22</color>
+
+    <!-- 위젯 -->
+    <color name="widget_bg">#FF1E1F22</color>
+    <color name="widget_text">#FFE8E6E3</color>
+    <color name="widget_subtle">#FF9DA1A8</color>
+    <color name="widget_line">#FF3A3C42</color>
+    <color name="widget_red">#FF8E3B34</color>
+    <color name="widget_blue">#FF2F4F86</color>
+    <color name="widget_yellow">#FF6E6100</color>
 </resources>

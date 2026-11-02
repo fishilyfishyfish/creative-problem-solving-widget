@@ -33,13 +33,14 @@ object TickScheduler {
         val canExact = Build.VERSION.SDK_INT < Build.VERSION_CODES.S || alarmManager.canScheduleExactAlarms()
         try {
             if (canExact) {
-                // RTC(비깨우기): 화면이 꺼져 있으면 다음에 켜질 때 울린다. 배터리 부담 없음.
-                alarmManager.setExact(AlarmManager.RTC, triggerAt, pi)
+                // 폰이 잠들어 있어도(절전 상태 포함) 제시각에 깨워서 위젯을 바꿔둔다.
+                // 하루 20번 정도, 매번 1초 미만이라 배터리 영향은 거의 없다.
+                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pi)
             } else {
-                alarmManager.setWindow(AlarmManager.RTC, triggerAt, 60_000L, pi)
+                alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pi)
             }
         } catch (e: SecurityException) {
-            alarmManager.setWindow(AlarmManager.RTC, triggerAt, 60_000L, pi)
+            alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pi)
         }
     }
 
