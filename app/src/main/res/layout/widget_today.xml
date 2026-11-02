@@ -26,7 +26,7 @@
             android:textSize="16sp"
             android:textStyle="bold" />
 
-        <View
+        <FrameLayout
             android:layout_width="1dp"
             android:layout_height="20dp"
             android:background="@color/widget_line" />
@@ -61,7 +61,7 @@
         </LinearLayout>
     </LinearLayout>
 
-    <View
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:background="@color/widget_line" />
@@ -86,50 +86,50 @@
                     <TextView android:id="@+id/period_subject_1" style="@style/WidgetSubject" />
                     <TextView android:id="@+id/period_room_1" style="@style/WidgetRoom" />
                 </LinearLayout>
-                <View android:id="@+id/period_div_1" style="@style/WidgetDivider" />
+                <FrameLayout android:id="@+id/period_div_1" style="@style/WidgetDivider" />
                 <LinearLayout android:id="@+id/period_row_2" style="@style/WidgetRow">
                     <TextView android:id="@+id/period_subject_2" style="@style/WidgetSubject" />
                     <TextView android:id="@+id/period_room_2" style="@style/WidgetRoom" />
                 </LinearLayout>
-                <View android:id="@+id/period_div_2" style="@style/WidgetDivider" />
+                <FrameLayout android:id="@+id/period_div_2" style="@style/WidgetDivider" />
                 <LinearLayout android:id="@+id/period_row_3" style="@style/WidgetRow">
                     <TextView android:id="@+id/period_subject_3" style="@style/WidgetSubject" />
                     <TextView android:id="@+id/period_room_3" style="@style/WidgetRoom" />
                 </LinearLayout>
-                <View android:id="@+id/period_div_3" style="@style/WidgetDivider" />
+                <FrameLayout android:id="@+id/period_div_3" style="@style/WidgetDivider" />
                 <LinearLayout android:id="@+id/period_row_4" style="@style/WidgetRow">
                     <TextView android:id="@+id/period_subject_4" style="@style/WidgetSubject" />
                     <TextView android:id="@+id/period_room_4" style="@style/WidgetRoom" />
                 </LinearLayout>
-                <View android:id="@+id/period_div_4" style="@style/WidgetDivider" />
+                <FrameLayout android:id="@+id/period_div_4" style="@style/WidgetDivider" />
                 <LinearLayout android:id="@+id/period_row_5" style="@style/WidgetRow">
                     <TextView android:id="@+id/period_subject_5" style="@style/WidgetSubject" />
                     <TextView android:id="@+id/period_room_5" style="@style/WidgetRoom" />
                 </LinearLayout>
-                <View android:id="@+id/period_div_5" style="@style/WidgetDivider" />
+                <FrameLayout android:id="@+id/period_div_5" style="@style/WidgetDivider" />
                 <LinearLayout android:id="@+id/period_row_6" style="@style/WidgetRow">
                     <TextView android:id="@+id/period_subject_6" style="@style/WidgetSubject" />
                     <TextView android:id="@+id/period_room_6" style="@style/WidgetRoom" />
                 </LinearLayout>
-                <View android:id="@+id/period_div_6" style="@style/WidgetDivider" />
+                <FrameLayout android:id="@+id/period_div_6" style="@style/WidgetDivider" />
                 <LinearLayout android:id="@+id/period_row_7" style="@style/WidgetRow">
                     <TextView android:id="@+id/period_subject_7" style="@style/WidgetSubject" />
                     <TextView android:id="@+id/period_room_7" style="@style/WidgetRoom" />
                 </LinearLayout>
-                <View android:id="@+id/period_div_7" style="@style/WidgetDivider" />
+                <FrameLayout android:id="@+id/period_div_7" style="@style/WidgetDivider" />
                 <LinearLayout android:id="@+id/period_row_8" style="@style/WidgetRow">
                     <TextView android:id="@+id/period_subject_8" style="@style/WidgetSubject" />
                     <TextView android:id="@+id/period_room_8" style="@style/WidgetRoom" />
                 </LinearLayout>
-                <View android:id="@+id/period_div_8" style="@style/WidgetDivider" />
+                <FrameLayout android:id="@+id/period_div_8" style="@style/WidgetDivider" />
                 <LinearLayout android:id="@+id/period_row_9" style="@style/WidgetRow">
                     <TextView android:id="@+id/period_subject_9" style="@style/WidgetSubject" />
                     <TextView android:id="@+id/period_room_9" style="@style/WidgetRoom" />
                 </LinearLayout>
-                <View android:id="@+id/period_div_9" style="@style/WidgetDivider" />
+                <FrameLayout android:id="@+id/period_div_9" style="@style/WidgetDivider" />
         </LinearLayout>
 
-        <View
+        <FrameLayout
             android:layout_width="1dp"
             android:layout_height="match_parent"
             android:background="@color/widget_line" />
